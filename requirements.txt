@@ -1,0 +1,10 @@
+numpy
+pandas
+matplotlib
+scipy
+pyedflib
+torch
+torchvision
+torchaudio
+notebook
+ipykernel
