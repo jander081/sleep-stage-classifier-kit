@@ -5,116 +5,130 @@ import torch
 from torch import nn, optim
 from torch.utils.data import Dataset, DataLoader
 from pathlib import Path
+import random
 
 # ---- Custom Dataset for loading spectrograms ----
 class SleepSpectrogramDataset(Dataset):
-    def __init__(self, index_csv, root_dir):
-        # Load CSV with epoch info and paths to .npy spectrograms
-        df = pd.read_csv(index_csv)
-        self.paths = df['path'].tolist()     # list of .npy files (per-epoch spectrograms)
-        self.labels = df['stage'].tolist()   # list of corresponding stage labels
+    def __init__(self, df, root_dir):
+        # DataFrame with patient, path, label info
+        self.paths = df['path'].tolist()
+        self.labels = df['stage'].tolist()
+        self.patient_ids = df['patient_id'].tolist()
         self.root_dir = Path(root_dir)
 
-        # Label encoding: convert stage names to integer indices (needed for PyTorch)
+        # Label encoding
         label_set = sorted(list(set(self.labels)))
         self.label_to_idx = {lab: idx for idx, lab in enumerate(label_set)}
         self.idx_to_label = {idx: lab for lab, idx in self.label_to_idx.items()}
 
-        # DEBUG: Print mapping for your reference
-        print("Label to index mapping:", self.label_to_idx)
-
     def __len__(self):
-        # Number of epochs in dataset
         return len(self.paths)
 
     def __getitem__(self, idx):
-        # Load one spectrogram and label
-        x = np.load(self.root_dir / self.paths[idx])   # shape: (freq, time)
-        x = np.expand_dims(x, axis=0)                  # add channel dim: (1, freq, time)
+        # Full path includes patient folder
+        full_path = self.root_dir / self.patient_ids[idx] / self.paths[idx]
+        x = np.load(full_path)
+        x = np.expand_dims(x, axis=0)
         x = torch.tensor(x, dtype=torch.float32)
-        y = self.label_to_idx[self.labels[idx]]        # convert label to int
+        y = self.label_to_idx[self.labels[idx]]
         return x, y
 
-# ---- Simple CNN for classifying sleep stages from spectrograms ----
+# ---- Simple CNN (unchanged) ----
 class SimpleSleepCNN(nn.Module):
     def __init__(self, n_classes):
         super().__init__()
-        # Conv layer 1: (in_channels=1, out_channels=16, kernel=3x3)
         self.conv1 = nn.Conv2d(1, 16, 3, padding=1)
-        # Conv layer 2: (in_channels=16, out_channels=32, kernel=3x3)
         self.conv2 = nn.Conv2d(16, 32, 3, padding=1)
-        # MaxPool layer (reduces spatial dims by half each time)
         self.pool = nn.MaxPool2d(2)
-
-        # Flattening will depend on input shape; adjust if shape mismatch
-        # Example: input spectrogram (1, 128, 59) --> pool --> (32, 32, 14) after 2 pools
-        self.fc1 = nn.Linear(32 * 32 * 14, 64)   # adjust these numbers to match your actual output shape!
+        self.fc1 = nn.Linear(32 * 32 * 14, 64)  # adjust to match your data!
         self.fc2 = nn.Linear(64, n_classes)
 
     def forward(self, x):
-        # x: (batch, channels, freq, time)
         x = torch.relu(self.conv1(x))
         x = self.pool(x)
         x = torch.relu(self.conv2(x))
         x = self.pool(x)
-        # Debug: print output shape after conv/pool
-        # print("Shape before flatten:", x.shape)
-        x = x.view(x.size(0), -1)    # flatten all but batch
+        x = x.view(x.size(0), -1)
         x = torch.relu(self.fc1(x))
         x = self.fc2(x)
         return x
 
-# ---- Training function for one epoch ----
 def train_one_epoch(model, loader, loss_fn, optimizer, device):
-    model.train()   # set to training mode
+    model.train()
     total_loss = 0
     for xb, yb in loader:
         xb, yb = xb.to(device), yb.to(device)
         optimizer.zero_grad()
-        out = model(xb)           # predictions (logits)
-        loss = loss_fn(out, yb)   # compute loss
+        out = model(xb)
+        loss = loss_fn(out, yb)
         loss.backward()
         optimizer.step()
         total_loss += loss.item()
-    avg_loss = total_loss / len(loader)
-    return avg_loss
+    return total_loss / len(loader)
 
-# ---- Main script ----
+def eval_accuracy(model, loader, device):
+    model.eval()
+    correct = 0
+    total = 0
+    with torch.no_grad():
+        for xb, yb in loader:
+            xb, yb = xb.to(device), yb.to(device)
+            out = model(xb)
+            preds = out.argmax(1)
+            correct += (preds == yb).sum().item()
+            total += yb.size(0)
+    return correct / total if total > 0 else 0
+
 def main():
-    # Configs
-    index_csv = "../dataset/SN001/index.csv"   # CSV listing spectrograms and labels
-    root_dir = "../dataset/SN001"
+    # ---- Configs ----
+    index_csv = "../dataset/master_index.csv"
+    root_dir = "../dataset"
     batch_size = 16
     epochs = 10
     lr = 1e-3
+    test_ratio = 0.3   # 30% of patients for test
 
-    # Load dataset and preview first item
-    dataset = SleepSpectrogramDataset(index_csv, root_dir)
-    x0, y0 = dataset[0]
-    print("First spectrogram shape:", x0.shape)   # should be (1, freq, time)
-    print("First label index:", y0, "label:", dataset.idx_to_label[y0])
+    # ---- Load and split by patient ----
+    df = pd.read_csv(index_csv)
+    unique_patients = sorted(df['patient_id'].unique())
+    random.shuffle(unique_patients)
+    n_test = max(1, int(len(unique_patients) * test_ratio))
+    test_patients = unique_patients[:n_test]
+    train_patients = unique_patients[n_test:]
 
-    loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+    train_df = df[df['patient_id'].isin(train_patients)]
+    test_df = df[df['patient_id'].isin(test_patients)]
 
-    # Model setup
-    n_classes = len(set(dataset.labels))
+    print(f"Train patients: {train_patients}")
+    print(f"Test patients: {test_patients}")
+    print(f"Train epochs: {len(train_df)}, Test epochs: {len(test_df)}")
+
+    # ---- Datasets and loaders ----
+    train_dataset = SleepSpectrogramDataset(train_df, root_dir)
+    test_dataset = SleepSpectrogramDataset(test_df, root_dir)
+
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+
+    n_classes = len(set(df['stage']))
     model = SimpleSleepCNN(n_classes)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = model.to(device)
     print(f"Model loaded on {device}")
 
-    # Training setup
     loss_fn = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=lr)
 
-    # Training loop
+    # ---- Training loop ----
     for epoch in range(epochs):
-        loss = train_one_epoch(model, loader, loss_fn, optimizer, device)
-        print(f"Epoch {epoch+1}/{epochs}, Loss: {loss:.4f}")
+        train_loss = train_one_epoch(model, train_loader, loss_fn, optimizer, device)
+        test_acc = eval_accuracy(model, test_loader, device)
+        print(f"Epoch {epoch+1}/{epochs}, Train loss: {train_loss:.4f}, Test accuracy: {test_acc:.3f}")
 
-    # Save model weights
-    torch.save(model.state_dict(), "sleep_cnn.pth")
-    print("Training done, model saved.")
+    # ---- Save model weights ----
+    Path("../models").mkdir(parents=True, exist_ok=True)
+    torch.save(model.state_dict(), "../models/sleep_cnn.pth")
+    print("Training done, model saved to models/.")
 
 if __name__ == "__main__":
     main()

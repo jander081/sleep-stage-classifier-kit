@@ -39,5 +39,23 @@ Place raw EDF files and scoring EDF files in `data/raw_edf/` and `data/scoring_e
 
 ## TODO
 
-- Add model training script
 - Add Colab demo notebook
+
+## Current Progress
+
+- [x] Preprocessing pipeline: Generates spectrograms and per-patient index.csv files for all patients in `data/raw_edf` and `data/scoring_edf`
+- [x] Master index creation: Combines all patient index files into `master_index.csv` for full-dataset analysis
+- [x] Helper functions refactored and commented for clarity
+- [x] Unit tests (pytest) written for helper functions
+- [x] Successful run for 5 patients, ready to add more
+
+## Next Steps
+
+- [x] Import 5 more patients (aiming for 10+ in dataset)
+- [ ] Run/update spectrogram pipeline on new patients
+- [ ] Update/check `master_index.csv`
+- [ ] (Optional) Do exploratory data analysis in Jupyter
+- [ ] Begin training the classifier using the preprocessed dataset
+    - Prepare data splits for train/test
+    - Train, evaluate, and visualize model performance
+- [ ] Continue refactoring and testing as pipeline expands
