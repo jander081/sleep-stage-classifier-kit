@@ -1,0 +1,20 @@
+# config.yaml
+
+raw_dir: ../data/raw_edf
+scoring_dir: ../data/scoring_edf
+out_dir: ../dataset
+
+channels_of_interest: [0, 1, 2, 3, 4, 5, 6, 7]  # 0-based indices
+channel_map:
+  0: "EEG F4-M1"
+  1: "EEG C4-M1"
+  2: "EEG O2-M1"
+  3: "EEG C3-M2"
+  4: "EMG chin"
+  5: "EOG E1-M2"
+  6: "EOG E2-M2"
+  7: "ECG"
+
+nfft: 512
+sr: 256
+max_hz: 64
