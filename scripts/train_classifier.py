@@ -1,3 +1,30 @@
+# scripts/train_classifier.py
+"""
+Sleep Stage Classification Training Script
+
+This script trains a simple convolutional neural network (CNN) to classify sleep stages 
+based on spectrogram data extracted from EEG or related signals. The input data consists 
+of spectrograms saved as .npy files (NumPy arrays), each representing one epoch (time segment) 
+of sleep data.
+
+Data Structure:
+- A CSV file (index_csv) is used to index the dataset. It contains at least two columns:
+  1. 'path': relative file paths to the .npy spectrogram files for each epoch.
+  2. 'stage': the sleep stage label for each epoch (e.g., 'Wake', 'N1', 'N2', 'REM', etc.).
+- The root_dir is the base directory where these spectrogram files are stored.
+
+Training Pipeline:
+- The dataset is loaded and wrapped in a PyTorch Dataset class to enable easy batching.
+- A simple CNN with two convolutional layers and max pooling is defined to extract features.
+- The network outputs logits for each sleep stage class, which are trained using cross-entropy loss.
+- The training loop iterates over the dataset for a fixed number of epochs.
+- After training, the model weights are saved to disk.
+
+Note:
+- This script does not explicitly split data into train/test sets; it assumes the CSV 
+  provided is for training. For evaluation, a separate CSV and dataset loader should be used.
+- Labels are automatically encoded as integers for classification.
+"""
 # ---- Imports: Data, ML, and Paths ----
 import numpy as np
 import pandas as pd
@@ -9,6 +36,23 @@ import random
 
 # ---- Custom Dataset for loading spectrograms ----
 class SleepSpectrogramDataset(Dataset):
+    """
+    PyTorch Dataset for loading sleep spectrograms and their associated sleep stage labels.
+
+    Args:
+        index_csv (str or Path): Path to CSV file listing spectrogram file paths and labels.
+        root_dir (str or Path): Root directory where spectrogram .npy files are stored.
+
+    The CSV file is expected to have at least two columns:
+        - 'path': relative path to the .npy spectrogram file for each epoch.
+        - 'stage': sleep stage label string for each epoch.
+
+    Attributes:
+        paths (list of str): List of relative file paths to spectrograms.
+        labels (list of str): Corresponding list of sleep stage labels.
+        label_to_idx (dict): Mapping from label string to integer index.
+        idx_to_label (dict): Reverse mapping from integer index to label string.
+    """
     def __init__(self, df, root_dir):
         # DataFrame with patient, path, label info
         self.paths = df['path'].tolist()
@@ -18,10 +62,13 @@ class SleepSpectrogramDataset(Dataset):
 
         # Label encoding
         label_set = sorted(list(set(self.labels)))
+         # unique labels sorted for consistent mapping
         self.label_to_idx = {lab: idx for idx, lab in enumerate(label_set)}
         self.idx_to_label = {idx: lab for lab, idx in self.label_to_idx.items()}
+        # {0: 'Sleep stage N1', 1: 'Sleep stage N2', 2: 'Sleep stage N3', 3: 'Sleep stage R', 4: 'Sleep stage W'}
 
     def __len__(self):
+        # Total number of spectrograms (epochs) in dataset
         return len(self.paths)
 
     def __getitem__(self, idx):

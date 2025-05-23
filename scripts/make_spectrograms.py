@@ -14,7 +14,7 @@ Usage:
 import numpy as np
 import pandas as pd
 from pyedflib import highlevel
-from scipy.signal import spectrogram
+from scipy.signal import spectrogram 
 from pathlib import Path
 import glob
 import os
