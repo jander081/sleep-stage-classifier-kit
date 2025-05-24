@@ -22,3 +22,9 @@ notes.txt
 # Ignore logs
 logs/
 sleepkit.log
+
+# Python package/build artifacts
+*.egg-info/
+*.egg
+dist/
+build/
