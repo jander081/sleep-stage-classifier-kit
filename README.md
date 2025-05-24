@@ -1,61 +1,160 @@
-# Sleep Stage Classifier Kit
+# SleepKit: Multi-Channel Sleep Stage Classifier Toolkit
 
-A toolkit for preprocessing polysomnography EEG data, building spectrograms, and training deep learning models to classify sleep stages.
+**SleepKit** is a modular, research-grade Python toolkit for preprocessing polysomnography (PSG) data, generating multi-channel spectrograms, and building deep learning models to classify sleep stages.
 
+---
+
+## Features
+
+- **Handles full-night PSG data** from 8+ channels (EEG, EMG, EOG, ECG)
+- **Generates per-epoch, multi-channel spectrograms** for all patient files
+- **Flexible config (`config.yaml`)** to set channels, sampling rate, NFFT, frequency mask, and more
+- **Batch processing** of 150+ patients (scalable, memory-aware)
+- **Train/test split and classifier training** (deep learning-ready)
+- **Unit tested** (`pytest`) and modular codebase
+- **Logging** for easy debugging and reproducibility
+- **Easy export** for downstream analysis in Python or R
+
+---
+
+<pre>
 ## Project Structure
 
-- `scripts/`: Python scripts for data prep and model training
-- `notebooks/`: Jupyter notebooks for exploration and demo
-- `data/`: (Not tracked) Raw EDF and scoring files
-- `dataset/`: (Not tracked) Output spectrograms and index files
+```text
+sleep_study/
+│
+├── src/
+│   └── sleepkit/
+│       ├── __init__.py
+│       ├── utils.py
+│       └── (more modules...)
+│
+├── scripts/
+│   ├── make_spectrograms.py
+│   ├── train_classifier.py
+│   └── (other scripts...)
+│
+├── tests/
+│   └── test_utils.py
+│
+├── data/
+│   ├── raw_edf/
+│   └── scoring_edf/
+│
+├── dataset/
+│   └── (per-patient spectrograms and indexes)
+│
+├── config.yaml
+├── pyproject.toml
+├── README.md
+└── notes.txt
+```
+</pre>
 
-## Quick Start
+---
 
-1. Install dependencies: 
+## ⚡ Quick Start
 
-% pip install -r requirements.txt
+1. **Clone this repo and create your environment:**
+    ```bash
+    git clone https://github.com/your-username/sleepkit.git
+    cd sleepkit
+    pip install -e .
+    ```
 
-2. Prepare data:
+2. **Edit `config.yaml`:**  
+   Set your desired channels, frequency range, data paths, and options.
 
-Place raw EDF files and scoring EDF files in `data/raw_edf/` and `data/scoring_edf/` respectively.
+3. **Prepare data:**  
+   - Place raw EDF files in `data/raw_edf/`
+   - Place sleep scoring files in `data/scoring_edf/`
 
-3. Build spectrograms (example):
+4. **Build spectrograms:**
+    ```bash
+    python scripts/make_spectrograms.py
+    ```
 
-% python scripts/make_spectrograms.py
+5. **Train classifier:**
+    ```bash
+    python scripts/train_classifier.py
+    ```
 
-4. (Coming soon) Train classifier:
+6. **Run tests (optional but recommended):**
+    ```bash
+    python -m pytest
+    ```
 
-% python scripts/train_classifier.py
+---
 
 ## Requirements
 
-- Python 3.8+
-- See `requirements.txt` for Python package dependencies
+- Python 3.9+
+- See `requirements.txt` for Python dependencies (or use `pyproject.toml`)
 
-## Notes
+---
 
-- Data and dataset folders are excluded from git tracking.
-- Example data not included due to size/privacy.
+## Logging
 
-## TODO
+- All scripts write INFO-level logs to `sleepkit.log` (in the project root).
+- Check this file for batch processing status, errors, and progress.
 
-- Add Colab demo notebook
+---
 
-## Current Progress
+## Development Notes
 
-- [x] Preprocessing pipeline: Generates spectrograms and per-patient index.csv files for all patients in `data/raw_edf` and `data/scoring_edf`
-- [x] Master index creation: Combines all patient index files into `master_index.csv` for full-dataset analysis
-- [x] Helper functions refactored and commented for clarity
-- [x] Unit tests (pytest) written for helper functions
-- [x] Successful run for 5 patients, ready to add more
+- All importable code is under `src/sleepkit/`
+- Uses a modern Python packaging layout (`pyproject.toml`, editable install)
+- Jupyter Notebooks:  
+  Add this to your first cell for imports to work:
+    ```python
+    import sys, os
+    sys.path.append(os.path.abspath('../src'))
+    ```
+
+---
+
+## Dataset & Privacy
+
+- **No patient data is included in this repo.**
+- Place your own EDF/scoring files in `data/` as described above.
+
+---
+
+## ✔️ Current Progress
+
+- [x] Multi-channel preprocessing pipeline, modularized and refactored
+- [x] Helper functions with docstrings, comments, and logging
+- [x] Unit tests with pytest
+- [x] Works for at least 10 patients, scalable to 150+
+- [ ] Multi-channel classifier in progress
+- [ ] Export scripts for R (upcoming)
+- [ ] Colab demo notebook (planned)
+
+---
 
 ## Next Steps
 
-- [x] Import 5 more patients (aiming for 10+ in dataset)
-- [ ] Run/update spectrogram pipeline on new patients
-- [ ] Update/check `master_index.csv`
-- [ ] (Optional) Do exploratory data analysis in Jupyter
-- [ ] Begin training the classifier using the preprocessed dataset
-    - Prepare data splits for train/test
-    - Train, evaluate, and visualize model performance
-- [ ] Continue refactoring and testing as pipeline expands
+- [ ] Finish multi-channel classifier and model evaluation
+- [ ] Add advanced visualizations and performance metrics
+- [ ] Add export for R and other statistical workflows
+- [ ] Expand PyTest coverage as codebase grows
+
+---
+
+## Contributing
+
+Pull requests and issue reports are welcome!  
+For significant changes, open an issue to discuss your ideas.
+
+---
+
+## License
+
+[MIT License] or your chosen license
+
+---
+
+## Acknowledgments
+
+Developed by Jake (and collaborators).  
+Thanks to the open-source PSG, EEG, and neuroscience communities.

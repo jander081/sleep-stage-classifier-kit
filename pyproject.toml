@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sleepkit"
+version = "0.1"
+description = "Sleep Stage Classifier Toolkit"
+authors = [{name = "Jacob"}]
+dependencies = []
+
+[tool.setuptools.packages.find]
+where = ["src"]
